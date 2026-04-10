@@ -1,46 +1,104 @@
-# DA6401 Assignment-2 Skeleton Guide
+# DA6401 Assignment 2 — Multi-Task Visual Perception Pipeline
 
-This repository is an instructional skeleton for building the complete visual perception pipeline on Oxford-IIIT Pet.
-
-
-### ADDITIONAL INSTRUCTIONS FOR ASSIGNMENT2:
-- Ensure VGG11 is implemented according to the official paper(https://arxiv.org/abs/1409.1556). The only difference being injecting BatchNorm and CustomDropout layers is your design choice.
-- Train all the networks on normalized images as input (as the test set given by autograder will be normalized images).
-- The output of Localization model = [x_center, y_center, width, height] all these numbers are with respect to image coordinates, in pixel space (not normalized)
-- Train the object localization network with the following loss function: MSE + custom_IOU_loss.
-- Make sure the custom_IOU loss is in range: [0,1]
-- In the custom IOU loss, you have to implement all the two reduction types: ["mean", "sum"] and the default reduction type should be "mean". You may include any other reduction type as well, which will help your network learn better.
-- multitask.py shd load the saved checkpoints (classifier.pth, localizer.pth, unet.pth), initialize the shared backbone and heads with these trained weights and do prediction.
-- Keep paths as relative paths for loading in multitask.py
-- Assume input image size is fixed according to vgg11 paper(can be hardcoded need not pass as args)
-- Stick to the arguments of the functions and classes given in the github repo, if you include any additional arguments make sure they always have some default value.
-- Do not import any other python packages apart from the ones mentioned in assignment pdf, if you do so the autograder will instantly crash and your submission will not be evaluated.
-- The following classes will be used by autograder: 
-    ```
-        from models.vgg11 import VGG11
-        from models.layers import CustomDropout
-        from losses.iou_loss import IoULoss
-        from multitask import MultiTaskPerceptionModel
-    ```
-- The submission link for this assignment will be available by Saturday(04/04/2026) on gradescope
-
-
-
-
-
-### GENERAL INSTRUCTIONS:
-- From this assignment onwards, if we find any wandb report which is private/inaccessible while grading, there wont be any second chance, that submission will be marked 0 for wandb marks.
-- The entireity of plots presented in the wandb report should be interactive and logged in the wandb project. Any screenshot or images of plots will straightly be marked 0 for that question.
-- Gradescope offers an option to activate whichever submission you want to, and that submission will be used for evaluation. Under any circumstances, no requests to be raised to TAs to activate any of your prior submissions. It is the student's responsibility to do so(if required) before submission deadline.
-- Assignment2 discussion forum has been opened on moodle for any doubt clarification/discussion.   
-
-
-
-
-## Contact
-
-For questions or issues, please contact the teaching staff or post on the course forum.
+**Student:** Dibyendu Sarkar (ma25m011)
+**Course:** DA6401 — Deep Learning, IIT Madras
 
 ---
 
-Good luck with your implementation!
+## Links
+
+- **W&B Report:** https://api.wandb.ai/links/ma25m011-ii/lhl0phb4
+- **GitHub:** https://github.com/ma25m011/DA6401-Assignment-2
+
+---
+
+## Overview
+
+A multi-task visual perception pipeline on the Oxford-IIIT Pet dataset using a VGG11 backbone built from scratch. Four tasks:
+
+1. **Classification** — 37-class breed classification (Macro F1: 0.436)
+2. **Object Localization** — Head bounding box regression (AP@0.5: 0.972, mIoU: 0.804)
+3. **Semantic Segmentation** — U-Net pixel-level trimap (Dice: 0.826, Pixel Acc: 0.897)
+4. **Unified Multi-Task Pipeline** — Single model, single forward pass, all three outputs
+
+---
+
+## Repository Structure
+
+```
+da6401_assignment_2/
+├── models/
+│   ├── vgg11.py          # VGG11Encoder + VGG11 alias
+│   ├── layers.py         # CustomDropout
+│   ├── classification.py # VGG11Classifier
+│   ├── localization.py   # VGG11Localizer
+│   ├── segmentation.py   # VGG11UNet
+│   └── multitask.py      # MultiTaskPerceptionModel
+├── losses/
+│   └── iou_loss.py       # IoULoss (mean/sum reductions)
+├── data/
+│   └── pets_dataset.py   # OxfordIIITPetDataset
+├── checkpoints/
+│   ├── classifier.pth
+│   ├── localizer.pth
+│   └── unet.pth
+├── multitask.py          # Top-level re-export for autograder
+├── train.py              # Training entrypoint
+├── inference.py          # Evaluation entrypoint
+└── requirements.txt
+```
+
+---
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+```
+
+Dataset should be at `../oxford-iiit-pet/` relative to this directory.
+
+---
+
+## Training
+
+```bash
+# Task 1: Classification
+python train.py --task classifier --epochs 60
+
+# Task 2: Localization
+python train.py --task localizer --epochs 60
+
+# Task 3: Segmentation
+python train.py --task segmentation --epochs 30
+
+# Ablation experiments (for W&B report)
+python train.py --task ablation_bn --epochs 30
+python train.py --task ablation_dropout --epochs 30
+python train.py --task ablation_seg --epochs 30
+```
+
+---
+
+## Evaluation
+
+```bash
+# Full evaluation (all tasks)
+python inference.py
+
+# Pipeline showcase on novel images
+python inference.py --images path/img1.jpg path/img2.jpg path/img3.jpg
+```
+
+---
+
+## Key Implementation Notes
+
+- VGG11 built from scratch with `torch.nn` — no pretrained models
+- Input images must be normalized (ImageNet mean/std)
+- Input size fixed at 224×224
+- Localization output: `[x_center, y_center, width, height]` in pixel space
+- IoULoss range: [0, 1], supports `mean` and `sum` reductions
+- Upsampling in U-Net uses Transposed Convolutions (no bilinear interpolation)
+- Checkpoints loaded via relative paths in `multitask.py`
+- Only packages used: torch, numpy, matplotlib, pillow, albumentations, wandb, scikit-learn

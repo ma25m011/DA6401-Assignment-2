@@ -7,13 +7,30 @@ import torch
 import torch.nn as nn
 
 
+def _make_block(in_c, out_c, num_convs, use_bn=True):
+    layers = []
+    for i in range(num_convs):
+        c_in = in_c if i == 0 else out_c
+        layers.append(nn.Conv2d(c_in, out_c, 3, padding=1))
+        if use_bn:
+            layers.append(nn.BatchNorm2d(out_c))
+        layers.append(nn.ReLU(inplace=True))
+    return nn.Sequential(*layers)
+
+
 class VGG11Encoder(nn.Module):
     """VGG11-style encoder with optional intermediate feature returns.
     """
 
-    def __init__(self, in_channels: int = 3):
+    def __init__(self, in_channels: int = 3, use_bn: bool = True):
         """Initialize the VGG11Encoder model."""
-        pass
+        super().__init__()
+        self.block1 = _make_block(in_channels, 64, 1, use_bn)
+        self.block2 = _make_block(64, 128, 1, use_bn)
+        self.block3 = _make_block(128, 256, 2, use_bn)
+        self.block4 = _make_block(256, 512, 2, use_bn)
+        self.block5 = _make_block(512, 512, 2, use_bn)
+        self.pool = nn.MaxPool2d(2, 2)
 
     def forward(
         self, x: torch.Tensor, return_features: bool = False
@@ -28,5 +45,24 @@ class VGG11Encoder(nn.Module):
             - if return_features=False: bottleneck feature tensor.
             - if return_features=True: (bottleneck, feature_dict).
         """
-        # TODO: Implement forward pass.
-        raise NotImplementedError("Implement VGG11Encoder.forward")
+        f1 = self.block1(x)
+        x = self.pool(f1)
+
+        f2 = self.block2(x)
+        x = self.pool(f2)
+
+        f3 = self.block3(x)
+        x = self.pool(f3)
+
+        f4 = self.block4(x)
+        x = self.pool(f4)
+
+        f5 = self.block5(x)
+        x = self.pool(f5)
+
+        if return_features:
+            return x, {'block1': f1, 'block2': f2, 'block3': f3, 'block4': f4, 'block5': f5}
+        return x
+
+
+VGG11 = VGG11Encoder
