@@ -56,7 +56,7 @@ da6401_assignment_2/
 pip install -r requirements.txt
 ```
 
-Dataset should be at `../oxford-iiit-pet/` relative to this directory.
+Dataset should be at `https://www.robots.ox.ac.uk/~vgg/data/pets/` relative to this directory.
 
 ---
 

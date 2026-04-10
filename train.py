@@ -78,9 +78,16 @@ def _log_feature_maps(model, loader):
     handles.append(model.encoder.block5.register_forward_hook(hook('last')))
 
     model.eval()
-    imgs, *_ = next(iter(loader))
+    dog_img = None
+    for imgs, labels, *_ in loader:
+        dog_idx = (labels >= 12).nonzero(as_tuple=True)[0]
+        if len(dog_idx) > 0:
+            dog_img = imgs[dog_idx[0]:dog_idx[0]+1]
+            break
+    if dog_img is None:
+        dog_img = imgs[:1]
     with torch.no_grad():
-        model(imgs[:1].to(DEVICE))
+        model(dog_img.to(DEVICE))
     for h in handles:
         h.remove()
 
