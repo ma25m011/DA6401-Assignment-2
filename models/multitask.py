@@ -55,12 +55,13 @@ class MultiTaskPerceptionModel(nn.Module):
 
     def _load_weights(self, clf_path, loc_path, unet_path):
         clf_sd = torch.load(clf_path, map_location='cpu')
-        enc_sd = {k[8:]: v for k, v in clf_sd.items() if k.startswith('encoder.')}
         cls_sd = {k[5:]: v for k, v in clf_sd.items() if k.startswith('head.')}
-        self.encoder.load_state_dict(enc_sd)
         self.cls_head.load_state_dict(cls_sd)
 
+        # load encoder from localizer checkpoint so BN running stats match loc_head
         loc_sd = torch.load(loc_path, map_location='cpu')
+        enc_sd = {k[8:]: v for k, v in loc_sd.items() if k.startswith('encoder.')}
+        self.encoder.load_state_dict(enc_sd)
         loc_head_sd = {k[5:]: v for k, v in loc_sd.items() if k.startswith('head.')}
         self.loc_head.load_state_dict(loc_head_sd)
 
