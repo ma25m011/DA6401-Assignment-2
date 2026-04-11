@@ -167,8 +167,10 @@ def train_classifier(args):
 
 # ── localizer ─────────────────────────────────────────────────────────────────
 
-def _train_epoch_loc(model, loader, opt, mse, iou):
+def _train_epoch_loc(model, loader, opt, mse, iou, freeze_encoder=False):
     model.train()
+    if freeze_encoder:
+        model.encoder.eval()  # keep BN stats frozen
     loss_sum, n = 0.0, 0
     for imgs, _, bboxes, _, has_bbox in loader:
         imgs, bboxes = imgs.to(DEVICE), bboxes.to(DEVICE)
@@ -220,6 +222,7 @@ def train_localizer(args):
     if args.freeze == 'frozen':
         for p in model.encoder.parameters():
             p.requires_grad = False
+        model.encoder.eval()  # freeze BN running stats too
     elif args.freeze == 'partial':
         for name, p in model.encoder.named_parameters():
             if any(f'block{i}' in name for i in [1, 2, 3]):
@@ -232,7 +235,7 @@ def train_localizer(args):
 
     best_loss = float('inf')
     for epoch in range(args.epochs):
-        tr_loss = _train_epoch_loc(model, train_loader, opt, mse, iou)
+        tr_loss = _train_epoch_loc(model, train_loader, opt, mse, iou, freeze_encoder=(args.freeze == 'frozen'))
         val_loss = _val_loc(model, val_loader, mse, iou)
         sched.step()
         wandb.log({'train_loss': tr_loss, 'val_loss': val_loss, 'epoch': epoch + 1})
