@@ -26,11 +26,15 @@ class VGG11Encoder(nn.Module):
         """Initialize the VGG11Encoder model."""
         super().__init__()
         self.block1 = _make_block(in_channels, 64, 1, use_bn)
+        self.pool1 = nn.MaxPool2d(2, 2)
         self.block2 = _make_block(64, 128, 1, use_bn)
+        self.pool2 = nn.MaxPool2d(2, 2)
         self.block3 = _make_block(128, 256, 2, use_bn)
+        self.pool3 = nn.MaxPool2d(2, 2)
         self.block4 = _make_block(256, 512, 2, use_bn)
+        self.pool4 = nn.MaxPool2d(2, 2)
         self.block5 = _make_block(512, 512, 2, use_bn)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool5 = nn.MaxPool2d(2, 2)
 
     def forward(
         self, x: torch.Tensor, return_features: bool = False
@@ -46,19 +50,19 @@ class VGG11Encoder(nn.Module):
             - if return_features=True: (bottleneck, feature_dict).
         """
         f1 = self.block1(x)
-        x = self.pool(f1)
+        x = self.pool1(f1)
 
         f2 = self.block2(x)
-        x = self.pool(f2)
+        x = self.pool2(f2)
 
         f3 = self.block3(x)
-        x = self.pool(f3)
+        x = self.pool3(f3)
 
         f4 = self.block4(x)
-        x = self.pool(f4)
+        x = self.pool4(f4)
 
         f5 = self.block5(x)
-        x = self.pool(f5)
+        x = self.pool5(f5)
 
         if return_features:
             return x, {'block1': f1, 'block2': f2, 'block3': f3, 'block4': f4, 'block5': f5}
